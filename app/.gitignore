@@ -3,5 +3,6 @@
 /build/intermediates
 /build/outputs/logs
 /build/outputs/apk/androidTest
+/build/outputs/apk/debug/app-debug.apk
 /build/tmp
 

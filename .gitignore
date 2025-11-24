@@ -18,4 +18,4 @@ local.properties
 # Project exclude paths
 #/app/build/
 # Project exclude paths
-/app/build/
+#/app/build/
