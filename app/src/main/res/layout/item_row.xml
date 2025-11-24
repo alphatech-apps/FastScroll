@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rowText"
+    android:layout_width="match_parent"
+    android:layout_height="60dp"
+    android:gravity="center_vertical"
+    android:background="@drawable/bg_round"
+    android:layout_marginVertical="1dp"
+    android:layout_marginHorizontal="13dp"
+    android:paddingHorizontal="20dp"
+    android:text="Row"
+    android:textSize="18sp"/>
