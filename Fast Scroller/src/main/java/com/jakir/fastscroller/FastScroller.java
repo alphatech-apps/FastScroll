@@ -21,6 +21,7 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 /**
  * FastScroller
@@ -36,14 +37,21 @@ import androidx.recyclerview.widget.RecyclerView;
  * Or customize:
  * ........................
  * FastScroller.attach(recyclerView,
- * 10,        // allWidthDp
- * 8,         // marginFromEndDp
- * 0xFF2196F3,// normalColor
- * 0xFFFFFFFF,// activeColor
- * null       // trackColor (null -> derived from theme)
+ * 10,                  // allWidthDp
+ * 8,                   // marginFromEndDp
+ * 0xFF2196F3,          // normalColor
+ * 0xFFFFFFFF,          // activeColor
+ * null                 // trackColor (null -> derived from theme)
+ * swipeRefreshLayout   // swipeRefreshLayout enable/disable
  * );
  * Or ....................
+
  * FastScroller.attach(recyclerView);
+ * FastScroller.attach(recyclerView, null, null, null, null, null);
+ * FastScroller.attach(recyclerView, swipeRefreshLayout);
+ * FastScroller.attach(recyclerView, null, null, null, null, null, swipeRefreshLayout);
+ * FastScroller.attach(recyclerView, null, null, null, null, Color.TRANSPARENT, swipeRefreshLayout);
+
  * FastScroller.attach(recyclerView, null, null, null, null, 0x00000000);
  * FastScroller.attach(recyclerView, null, null, null, null, Color.TRANSPARENT);
  * FastScroller.attach(recyclerView, null, null, Color.rgb(0,0,250), null, Color.parseColor("#00000000"));
@@ -53,18 +61,19 @@ import androidx.recyclerview.widget.RecyclerView;
  */
 
 /**
- Created by JAKIR HOSSAIN on 11/22/2025.
+ * Created by JAKIR HOSSAIN on 11/22/2025.
  **************************************************************************************************************************************************************/
 public class FastScroller {
 
+    private static final String TAG_TRACK = "fs_track";
+    private static final String TAG_THUMB = "fs_thumb";
+    private static final String TAG_TOUCH = "fs_touch";
     // smoothing
     private final float smoothFactor = 0.25f; // position smoothing
     private final float heightSmoothFactor = 0.20f; // height smoothing
-
     // recycler + layout
     private final RecyclerView recyclerView;
     private final LinearLayoutManager layoutManager;
-
     // handler
     private final Handler hideHandler = new Handler();
     // animation defaults
@@ -91,14 +100,10 @@ public class FastScroller {
     private float lastY = 0f;
     private float lastHeight = 0f;
     private boolean firstCall = true;
-    private static final String TAG_TRACK = "fs_track";
-    private static final String TAG_THUMB = "fs_thumb";
-    private static final String TAG_TOUCH = "fs_touch";
 
 
     // -------------------- Public attach helpers --------------------
-
-    private FastScroller(RecyclerView rv, Integer pAllWidthDp, Integer pMarginFromEndDp, Integer pNormalColor, Integer pActiveColor, Integer pTrackColor) {
+    private FastScroller(RecyclerView rv, Integer pAllWidthDp, Integer pMarginFromEndDp, Integer pNormalColor, Integer pActiveColor, Integer pTrackColor, androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout) {
         this.recyclerView = rv;
 
         if (!(rv.getLayoutManager() instanceof LinearLayoutManager)) {
@@ -125,17 +130,11 @@ public class FastScroller {
 
         // listeners
         setupScrollListener(rv.getContext());
-        setupTouchAreaDrag();
+
+        setupTouchAreaDrag(swipeRefreshLayout);
 
         // start hidden
         hideThumbImmediately();
-    }
-
-    /**
-     * Attach with all defaults (theme colors).
-     */
-    public static void attach(RecyclerView recyclerView) {
-        attach(recyclerView, null, null, null, null, null);
     }
 
     // -------------------- Constructor --------------------
@@ -143,17 +142,33 @@ public class FastScroller {
     /**
      * Attach with optional parameters. Pass null to use default/theme.
      *
-     * @param recyclerView    target RecyclerView (must have LinearLayoutManager)
-     * @param allWidthDp      width (dp) for track & thumb visual (nullable)
-     * @param marginFromEndDp margin-end (dp) from parent edge (nullable)
-     * @param normalColor     color int for thumb normal state (nullable -> theme)
-     * @param activeColor     color int for thumb active/touch state (nullable -> theme)
-     * @param trackColor      color int for track (nullable -> derived from theme)
+     * @param recyclerView       target RecyclerView (must have LinearLayoutManager)
+     * @param allWidthDp         width (dp) for track & thumb visual (nullable)
+     * @param marginFromEndDp    margin-end (dp) from parent edge (nullable)
+     * @param normalColor        color int for thumb normal state (nullable -> theme)
+     * @param activeColor        color int for thumb active/touch state (nullable -> theme)
+     * @param trackColor         color int for track (nullable -> derived from theme)
+     * @param swipeRefreshLayout enable/disable swipeRefreshLayout by dragging thumb
      */
+    public static void attach(RecyclerView recyclerView, Integer allWidthDp, Integer marginFromEndDp, Integer normalColor, Integer activeColor, Integer trackColor, androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout) {
+        removeExistingFastScroller(recyclerView);
+        new FastScroller(recyclerView, allWidthDp, marginFromEndDp, normalColor, activeColor, trackColor, swipeRefreshLayout);
+    }
+
     public static void attach(RecyclerView recyclerView, Integer allWidthDp, Integer marginFromEndDp, Integer normalColor, Integer activeColor, Integer trackColor) {
         removeExistingFastScroller(recyclerView);
-        new FastScroller(recyclerView, allWidthDp, marginFromEndDp, normalColor, activeColor, trackColor);
+        new FastScroller(recyclerView, allWidthDp, marginFromEndDp, normalColor, activeColor, trackColor, null);
     }
+
+    public static void attach(RecyclerView recyclerView, androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout) {
+        attach(recyclerView, null, null, null, null, null, swipeRefreshLayout);
+    }
+
+    public static void attach(RecyclerView recyclerView) {
+        attach(recyclerView, null, null, null, null, null, null);
+    }
+
+    // -------------------- remove Existing Fast Scroller--------------------
     private static void removeExistingFastScroller(RecyclerView rv) {
         ViewGroup parent = (ViewGroup) rv.getParent();
         if (parent == null) return;
@@ -167,8 +182,7 @@ public class FastScroller {
         }
     }
 
-    // -------------------- Color init --------------------
-
+    // -------------------- Setup color --------------------
     private void initColors(Context context, Integer userNormal, Integer userActive, Integer userTrack) {
         TypedValue tv = new TypedValue();
 
@@ -218,7 +232,6 @@ public class FastScroller {
     }
 
     // -------------------- View creation --------------------
-
     private void createTrack(Context context) {
         ViewGroup container = (ViewGroup) recyclerView.getParent();
         track = new View(context);
@@ -325,13 +338,11 @@ public class FastScroller {
     }
 
     // -------------------- Helpers --------------------
-
     private int dpToPx(Context ctx, int dp) {
         return (int) (dp * ctx.getResources().getDisplayMetrics().density);
     }
 
     // -------------------- Scroll listener --------------------
-
     private void setupScrollListener(Context context) {
         recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
@@ -376,10 +387,7 @@ public class FastScroller {
 
                 // ---------------- HEIGHT + POSITION LOGIC (unchanged) ----------------
                 int containerHeight = rv.getHeight();
-                int targetHeightPx = Math.max(
-                        dpToPx(rv.getContext(), minimumThumbHeightDp),
-                        (int) ((float) visible / total * containerHeight)
-                );
+                int targetHeightPx = Math.max(dpToPx(rv.getContext(), minimumThumbHeightDp), (int) ((float) visible / total * containerHeight));
 
                 int first = layoutManager.findFirstVisibleItemPosition();
                 float scrollRatio = (float) first / (total - visible);
@@ -396,17 +404,16 @@ public class FastScroller {
 
                 // touchArea
                 ViewGroup.LayoutParams lpTouch = touchArea.getLayoutParams();
-                lpTouch.height = (int) lastHeight +(int)extraTouchAreaHeight;
+                lpTouch.height = (int) lastHeight + (int) extraTouchAreaHeight;
                 touchArea.setLayoutParams(lpTouch);
-                touchArea.setY(lastY-(extraTouchAreaHeight/2));
+                touchArea.setY(lastY - (extraTouchAreaHeight / 2));
             }
 
         });
     }
 
     // -------------------- Touch/drag on touchArea --------------------
-
-    private void setupTouchAreaDrag() {
+    private void setupTouchAreaDrag(SwipeRefreshLayout swipeRefreshLayout) {
         touchArea.setOnTouchListener((v, event) -> {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
@@ -414,6 +421,7 @@ public class FastScroller {
                     thumbDownY = thumb.getY();
                     showThumb();
                     if (thumbDrawable != null) thumbDrawable.setColor(activeColor);
+                    if (swipeRefreshLayout != null) swipeRefreshLayout.setEnabled(false);
                     return true;
 
                 case MotionEvent.ACTION_MOVE: {
@@ -438,11 +446,12 @@ public class FastScroller {
 
                     // update thumb & touchArea
                     thumb.setY(newY);
-                    touchArea.setY(newY-(extraTouchAreaHeight/2));
+                    touchArea.setY(newY - (extraTouchAreaHeight / 2));
                     return true;
                 }
 
                 case MotionEvent.ACTION_UP:
+                    if (swipeRefreshLayout != null) swipeRefreshLayout.setEnabled(true);
                 case MotionEvent.ACTION_CANCEL:
                     if (thumbDrawable != null) thumbDrawable.setColor(normalColor);
                     scheduleHide();
@@ -453,7 +462,6 @@ public class FastScroller {
     }
 
     // -------------------- Show / Hide --------------------
-
     private void hideThumbImmediately() {
         isVisible = false;
 

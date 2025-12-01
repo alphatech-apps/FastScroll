@@ -1,5 +1,6 @@
 package com.jakir.fastscroller_recyclerview;
 
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,11 +13,14 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.jakir.fastscroller.FastScroller;
 
 public class MainActivity extends AppCompatActivity {
+    RecyclerView recyclerView;
+    private SwipeRefreshLayout swipeRefreshLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,25 +32,35 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-        RecyclerView recyclerView = findViewById(R.id.recyclerView);
 
+        swipeRefreshLayout = findViewById(R.id.swipeRefreshLayout);
+//        swipeRefreshLayout.setColorSchemeColors(ContextCompat.getColor(this, R.color.tolbar_color));
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            swipeRefreshLayout.setRefreshing(false);
+            loadItems();
+        });
+
+        recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-    View v = LayoutInflater.from(this).inflate(R.layout.edittext,null);
-        EditText editText=v.findViewById(R.id.e);
+        loadItems();
+
+
+//        FastScroller.attach(recyclerView);
+//        FastScroller.attach(recyclerView, null, null, null, null, null);
+
+//        FastScroller.attach(recyclerView, swipeRefreshLayout);
+//        FastScroller.attach(recyclerView, null, null, null, null, null, swipeRefreshLayout);
+
+        FastScroller.attach(recyclerView, null, null, null, null, Color.TRANSPARENT, swipeRefreshLayout);
+    }
+
+    private void loadItems() {
+        View v = LayoutInflater.from(this).inflate(R.layout.edittext, null);
+        EditText editText = v.findViewById(R.id.e);
         new MaterialAlertDialogBuilder(this).setTitle("Select item count").setView(v).setPositiveButton("OK", (dialog, which) -> {
-           int i = Integer.parseInt(editText.getText().toString().isEmpty()?"10":editText.getText().toString());
+            int i = Integer.parseInt(editText.getText().toString().isEmpty() ? "10" : editText.getText().toString());
             recyclerView.setAdapter(new SimpleAdapter(i));
         }).create().show()
         ;
-        // attach FastScroller
-
-        FastScroller.attach(recyclerView);
-//        FastScroller.attach(recyclerView, null, null, null, null, 0x00000000);
-//        FastScroller.attach(recyclerView, null, null, null, null, Color.TRANSPARENT);
-//        FastScroller.attach(recyclerView, null, null, Color.rgb(0, 0, 250), null, Color.parseColor("#00000000"));
-//        FastScroller.attach(recyclerView, null, null, Color.rgb(255, 0, 0), null, null);
-//        FastScroller.attach(recyclerView, 10, null, null, null, 0x00000000);
-//        FastScroller.attach(recyclerView, null, null, null, null, null);
-
     }
 }
