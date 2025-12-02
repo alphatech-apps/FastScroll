@@ -15,6 +15,7 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.constraintlayout.widget.ConstraintLayout;
@@ -218,8 +219,7 @@ public class FastScroller {
         fabTop.setClickable(true);
         fabTop.setFocusable(true);
         int size = dpToPx(context, fabSizeDp);
-        int margin = dpToPx(context, fabMarginDp);
-
+        int margin = getNavigationBarHeight(context);
 
         if (container instanceof RelativeLayout) {
             RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(size, size);
@@ -623,5 +623,16 @@ public class FastScroller {
         }
     }
 
+    // -------------------- Helper --------------------
+    public static int getNavigationBarHeight(Context context) {
+        int result = 0;
+        int resourceId = context.getResources().getIdentifier("navigation_bar_height", "dimen", "android");
+
+        if (resourceId > 0) {
+            result = context.getResources().getDimensionPixelSize(resourceId);
+        }
+
+        return result; // return height in px
+    }
 
 }
