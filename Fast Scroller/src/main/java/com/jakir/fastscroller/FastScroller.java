@@ -83,6 +83,8 @@ public class FastScroller {
     private final int minimumThumbHeightDp = 70;    // min thumb height (dp)
     private final int touchAreaWidthDp = 20;        // touch area width (dp)
     private final float extraTouchAreaHeight = 100; // touch area height (dp)
+    // -------------------- Setup Fab --------------------
+    private final long fabAnimDuration = 250L;
     private int allWidthDp = 7;                     // thumb & track visual width (dp)
     private int marginFromEndDp = 6;                // margin from end (dp)
     private int normalColor;
@@ -101,6 +103,12 @@ public class FastScroller {
     private float lastY = 0f;
     private float lastHeight = 0f;
     private boolean firstCall = true;
+    // -------------------- Back to Top FAB --------------------
+    private View fabTop; // FloatingActionButton or simple View
+    private boolean fabVisible = false;
+    private final int fabMarginDp = 12; // margin from end & bottom
+    private final int fabPaddingDp = 12;
+    private final int fabSizeDp = 63;
 
 
     // -------------------- Public attach helpers --------------------
@@ -124,6 +132,7 @@ public class FastScroller {
         createTrack(rv.getContext());
         createThumb(rv.getContext());
         createTouchArea(rv.getContext());
+        createFab(rv.getContext());
 
         track.setTag(TAG_TRACK);
         thumb.setTag(TAG_THUMB);
@@ -138,8 +147,6 @@ public class FastScroller {
         hideThumbImmediately();
     }
 
-    // -------------------- Constructor --------------------
-
     /**
      * Attach with optional parameters. Pass null to use default/theme.
      *
@@ -151,6 +158,7 @@ public class FastScroller {
      * @param trackColor         color int for track (nullable -> derived from theme)
      * @param swipeRefreshLayout enable/disable swipeRefreshLayout by dragging thumb
      */
+    // -------------------- Constructor --------------------
     public static void attach(RecyclerView recyclerView, Integer allWidthDp, Integer marginFromEndDp, Integer normalColor, Integer activeColor, Integer trackColor, androidx.swiperefreshlayout.widget.SwipeRefreshLayout swipeRefreshLayout) {
         removeExistingFastScroller(recyclerView);
         new FastScroller(recyclerView, allWidthDp, marginFromEndDp, normalColor, activeColor, trackColor, swipeRefreshLayout);
@@ -181,6 +189,54 @@ public class FastScroller {
                 parent.removeView(child);
             }
         }
+    }
+
+    // -------------------- Create FAB --------------------
+    private void createFab(Context context) {
+        ViewGroup container = (ViewGroup) recyclerView.getParent();
+
+        if (fabTop != null && fabTop.getParent() != null) {
+            container.removeView(fabTop);
+        }
+
+        androidx.cardview.widget.CardView cardView = new androidx.cardview.widget.CardView(context);
+        cardView.setPreventCornerOverlap(true);
+
+        cardView.setRadius(40);
+
+        cardView.setUseCompatPadding(true);
+        android.widget.ImageView iconView = new android.widget.ImageView(context);
+        iconView.setImageResource(R.drawable.arrow_upward);
+        iconView.setColorFilter(normalColor);
+        int padding = dpToPx(context, fabPaddingDp);
+        iconView.setPadding(padding, padding, padding, padding);
+
+        cardView.addView(iconView, new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT));
+
+        fabTop = cardView;
+        fabTop.setVisibility(View.GONE);
+        fabTop.setClickable(true);
+        fabTop.setFocusable(true);
+        int size = dpToPx(context, fabSizeDp);
+        int margin = dpToPx(context, fabMarginDp);
+
+
+        if (container instanceof RelativeLayout) {
+            RelativeLayout.LayoutParams lp = new RelativeLayout.LayoutParams(size, size);
+            lp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+            lp.addRule(RelativeLayout.CENTER_HORIZONTAL);
+            lp.bottomMargin = margin;
+            fabTop.setLayoutParams(lp);
+        } else {
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(size, size);
+            lp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+            lp.bottomMargin = margin;
+            fabTop.setLayoutParams(lp);
+        }
+
+        container.addView(fabTop);
+
+        fabTop.setOnClickListener(v -> recyclerView.smoothScrollToPosition(0));
     }
 
     // -------------------- Setup color --------------------
@@ -408,6 +464,16 @@ public class FastScroller {
                 lpTouch.height = (int) lastHeight + (int) extraTouchAreaHeight;
                 touchArea.setLayoutParams(lpTouch);
                 touchArea.setY(lastY - (extraTouchAreaHeight / 2));
+
+                int firstVisible = layoutManager.findFirstVisibleItemPosition();
+                int visibleCount = layoutManager.getChildCount();
+
+                // Show FAB only if firstVisible > visibleCount
+                if (firstVisible > visibleCount) {
+                    showFab();
+                } else {
+                    hideFab();
+                }
             }
 
         });
@@ -531,4 +597,31 @@ public class FastScroller {
 
         hideHandler.postDelayed(hideRunnable, hideDelay);
     }
+
+    // -------------------- Show / Hide FAB --------------------
+    private void showFab() {
+        if (!fabVisible && fabTop != null) {
+            fabTop.setVisibility(View.VISIBLE);
+            fabTop.setPivotX(fabTop.getWidth() / 2f);
+            fabTop.setPivotY(fabTop.getHeight() / 2f);
+            fabTop.setScaleX(0f);
+            fabTop.setScaleY(0f);
+
+            fabTop.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(fabAnimDuration).start();
+
+            fabVisible = true;
+        }
+    }
+
+    private void hideFab() {
+        if (fabVisible && fabTop != null) {
+            fabTop.setPivotX(fabTop.getWidth() / 2f);
+            fabTop.setPivotY(fabTop.getHeight() / 2f);
+            fabTop.animate().alpha(0f).scaleX(0f).scaleY(0f).setDuration(fabAnimDuration).withEndAction(() -> fabTop.setVisibility(View.GONE)).start();
+
+            fabVisible = false;
+        }
+    }
+
+
 }
