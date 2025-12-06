@@ -70,6 +70,7 @@ public class FastScroller {
     private static final String TAG_TRACK = "fs_track";
     private static final String TAG_THUMB = "fs_thumb";
     private static final String TAG_TOUCH = "fs_touch";
+    private static final String TAG_FAB = "fs_fab"; // <-- এই লাইনটি যোগ করুন
     // smoothing
     private final float smoothFactor = 0.25f; // position smoothing
     private final float heightSmoothFactor = 0.20f; // height smoothing
@@ -186,8 +187,7 @@ public class FastScroller {
         for (int i = parent.getChildCount() - 1; i >= 0; i--) {
             View child = parent.getChildAt(i);
             Object tag = child.getTag();
-            if (TAG_TRACK.equals(tag) || TAG_THUMB.equals(tag) || TAG_TOUCH.equals(tag)) {
-                parent.removeView(child);
+            if (TAG_TRACK.equals(tag) || TAG_THUMB.equals(tag) || TAG_TOUCH.equals(tag) || TAG_FAB.equals(tag)) {                parent.removeView(child);
             }
         }
     }
@@ -195,10 +195,6 @@ public class FastScroller {
     // -------------------- Create FAB --------------------
     private void createFab(Context context) {
         ViewGroup container = (ViewGroup) recyclerView.getParent();
-
-        if (fabTop != null && fabTop.getParent() != null) {
-            container.removeView(fabTop);
-        }
 
         androidx.cardview.widget.CardView cardView = new androidx.cardview.widget.CardView(context);
         cardView.setPreventCornerOverlap(true);
@@ -217,7 +213,8 @@ public class FastScroller {
         fabTop = cardView;
         fabTop.setVisibility(View.GONE);
         fabTop.setClickable(true);
-        fabTop.setFocusable(true);
+        fabTop.setTag(TAG_FAB); // <-- এই লাইনটি যোগ করুন
+         fabTop.setFocusable(true);
         int size = dpToPx(context, fabSizeDp);
         int margin = getNavigationBarHeight(context);
 
